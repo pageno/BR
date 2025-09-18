@@ -2,37 +2,116 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>코인 투자 그룹 매매일지</title>
 <style>
-  :root { --bg:#0d1117; --fg:#e6edf3; --brand:#58a6ff; --panel:#161b22; --panel2:#1f2733; --ok:#4ade80; --warn:#f87171; --line:#333; }
-  body{margin:0;padding:20px;background:var(--bg);color:var(--fg);font-family:system-ui,Segoe UI,Arial;}
-  h1,h2{text-align:center;color:var(--brand);}
-  input,button{padding:8px 10px;margin:4px;border-radius:8px;border:1px solid #222;background:#0f141a;color:var(--fg);}
-  button{background:#0b63ff22;border-color:#0b63ff44;cursor:pointer;} button:hover{background:#0b63ff33;}
-  .danger{background:var(--warn);border-color:#bb4b4b;color:#000;}
-  .group-card{background:var(--panel);padding:12px;margin:10px 0;border-radius:12px;}
-  .group-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
-  .group-title{flex:1;cursor:pointer;}
-  .meta{font-size:13px;color:#a9b7c6;margin-top:4px;}
-  .card-actions button{font-size:12px;padding:6px 10px;margin-left:6px;}
-  .progress-container{background:#222;border-radius:8px;overflow:hidden;height:16px;margin-top:8px;}
-  .progress-bar{background:var(--ok);height:100%;width:0%;text-align:center;font-size:12px;color:#000;}
-  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;justify-content:center;align-items:center;}
-  .modal{background:var(--panel);padding:20px;border-radius:14px;width:95%;max-width:560px;max-height:90vh;overflow:auto;}
-  .modal h3{color:var(--brand);margin:0 0 8px;}
-  .close-btn{float:right;cursor:pointer;color:var(--warn);font-weight:700;}
-  .progress-info{margin:6px 0;padding:6px;background:var(--panel2);border-radius:8px;text-align:center;font-size:14px;}
-  table{width:100%;border-collapse:collapse;margin-top:10px;}
-  th,td{border:1px solid var(--line);padding:8px;text-align:center;font-size:14px;}
-  th{background:var(--panel2);}
-  .done-row{background:#1c2a1c;}
-  .memo-input{width:95%;padding:6px;border-radius:6px;border:1px solid #222;background:#0f141a;color:var(--fg);}
-  .edit-form{background:var(--panel2);padding:10px;border-radius:10px;margin-top:10px;}
+  :root {
+    --bg:#0d1117; --fg:#e6edf3; --brand:#58a6ff;
+    --panel:#161b22; --panel2:#1f2733;
+    --ok:#4ade80; --warn:#f87171; --line:#333;
+  }
+  body {
+    margin:0; padding:16px;
+    background:var(--bg); color:var(--fg);
+    font-family:system-ui,Segoe UI,Arial,sans-serif;
+    font-size:16px; /* 기본 폰트 크기 확대 */
+  }
+  h1,h2 { text-align:center; color:var(--brand); margin:12px 0; }
+  input,button {
+    padding:10px 12px; margin:6px 0;
+    border-radius:10px; border:1px solid #222;
+    background:#0f141a; color:var(--fg);
+    font-size:16px; box-sizing:border-box;
+    width:100%; /* 모바일에서 전체 폭 사용 */
+  }
+  button {
+    background:#0b63ff33; border-color:#0b63ff55; cursor:pointer;
+  }
+  button:hover { background:#0b63ff44; }
+  .danger { background:var(--warn); border-color:#bb4b4b; color:#000; }
+  .wrap { max-width:900px; margin:auto; }
+
+  /* 카드 */
+  .group-card {
+    background:var(--panel); padding:16px;
+    margin:10px 0; border-radius:14px;
+  }
+  .group-header {
+    display:flex; flex-wrap:wrap;
+    justify-content:space-between; gap:10px;
+    align-items:flex-start;
+  }
+  .group-title { flex:1 1 60%; cursor:pointer; }
+  .meta { font-size:14px; color:#a9b7c6; margin-top:6px; }
+  .card-actions { flex:0 0 auto; display:flex; gap:6px; }
+  .card-actions button { flex:1; padding:8px 12px; font-size:14px; }
+
+  /* 진행률 바 */
+  .progress-container {
+    background:#222; border-radius:8px;
+    overflow:hidden; height:18px; margin-top:8px;
+  }
+  .progress-bar {
+    background:var(--ok); height:100%;
+    width:0%; text-align:center;
+    font-size:12px; color:#000;
+  }
+
+  /* 모달 */
+  .modal-bg {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.6);
+    z-index:9999; justify-content:center; align-items:center;
+    padding:12px;
+  }
+  .modal {
+    background:var(--panel); padding:18px;
+    border-radius:16px; width:100%; max-width:560px;
+    max-height:90vh; overflow:auto;
+  }
+  .modal h3 { color:var(--brand); margin:0 0 12px; }
+  .close-btn { float:right; cursor:pointer; color:var(--warn); font-weight:700; }
+  .progress-info {
+    margin:6px 0; padding:8px;
+    background:var(--panel2);
+    border-radius:10px; text-align:center; font-size:15px;
+  }
+
+  /* 테이블 - 모바일 가로 스크롤 */
+  .table-wrapper { overflow-x:auto; }
+  table {
+    width:100%; min-width:520px; /* 작아도 스크롤 가능 */
+    border-collapse:collapse; margin-top:10px;
+    font-size:14px;
+  }
+  th,td {
+    border:1px solid var(--line);
+    padding:8px 6px; text-align:center;
+  }
+  th { background:var(--panel2); }
+  .done-row { background:#1c2a1c; }
+  .memo-input {
+    width:95%; padding:6px;
+    border-radius:8px; border:1px solid #222;
+    background:#0f141a; color:var(--fg);
+    font-size:14px;
+  }
+
+  /* 인라인 수정폼 */
+  .edit-form {
+    background:var(--panel2); padding:12px;
+    border-radius:12px; margin-top:10px;
+  }
+
+  /* 반응형: 아주 작은 화면일 때 글씨 조금 축소 */
+  @media (max-width: 360px) {
+    body { font-size:15px; }
+    table { font-size:13px; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap" style="max-width:900px;margin:auto;">
+<div class="wrap">
   <h1>코인 투자 그룹 매매일지</h1>
 
   <!-- 로그인 -->
@@ -66,24 +145,25 @@
       <b>목표가</b> <span id="mGoal"></span> · 
       <b>라운드 수익률</b> <span id="mPercent"></span>%
     </div>
-    <!-- 현재액가 -->
     <div class="progress-info">
       현재액가 : <span id="mCurrent"></span> 원
     </div>
-    <!-- 진행 현황 -->
     <div class="progress-info">
       진행: <span id="mChecked"></span> / <span id="mTotal"></span> 단계
       (<span id="mProgress"></span>%)
     </div>
     <hr style="border-color:#222;">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th><th>체크</th><th>현재가</th><th>누적수익금</th><th>누적수익률</th><th>성공 메모</th>
-        </tr>
-      </thead>
-      <tbody id="mSteps"></tbody>
-    </table>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>체크</th><th>현재가</th>
+            <th>누적수익금</th><th>누적수익률</th><th>성공 메모</th>
+          </tr>
+        </thead>
+        <tbody id="mSteps"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -141,7 +221,10 @@ function addGroup(){
 function renderGroups(){
   const list=$('groupList'); const u=userData[nickname];
   list.innerHTML='<h2>내 투자 그룹</h2>';
-  if(u.groups.length===0){list.insertAdjacentHTML('beforeend','<p style="text-align:center;color:#aaa;">아직 그룹이 없습니다.</p>');return;}
+  if(u.groups.length===0){
+    list.insertAdjacentHTML('beforeend','<p style="text-align:center;color:#aaa;">아직 그룹이 없습니다.</p>');
+    return;
+  }
   u.groups.forEach((g,i)=>{
     const steps=calcSteps(g);
     while(u.checks[i].length<steps.length)u.checks[i].push(false);
@@ -166,22 +249,17 @@ function renderGroups(){
   });
 }
 
-/* ✅ 현재액가 표시 로직: 체크가 없으면 '시작가'를 보여준다 */
+/* ✅ 현재액가: 체크가 없으면 시작가 표시 */
 function updateCurrentDisplay(idx,steps){
   const u=userData[nickname];
-  // 최근 체크된 단계 인덱스 찾기
-  let lastCheckedIndex = -1;
-  for (let j=0;j<u.checks[idx].length;j++){
-    if (u.checks[idx][j]) lastCheckedIndex = j;
+  let lastChecked=-1;
+  for(let j=0;j<u.checks[idx].length;j++){
+    if(u.checks[idx][j]) lastChecked=j;
   }
-  let current;
-  if (lastCheckedIndex >= 0) {
-    current = steps[lastCheckedIndex]?.current ?? u.groups[idx].start;
-  } else {
-    // 체크가 하나도 없으면 시작가로 표시
-    current = u.groups[idx].start;
-  }
-  $('mCurrent').textContent = floor(current).toLocaleString();
+  let current = (lastChecked>=0)
+      ? steps[lastChecked]?.current ?? u.groups[idx].start
+      : u.groups[idx].start;
+  $('mCurrent').textContent=floor(current).toLocaleString();
 }
 
 function openModal(idx){
@@ -199,7 +277,7 @@ function openModal(idx){
   $('mChecked').textContent=checked;
   $('mTotal').textContent=steps.length;
   $('mProgress').textContent=progress;
-  updateCurrentDisplay(idx,steps); // ✅ 여기서 현재액가 갱신
+  updateCurrentDisplay(idx,steps);
 
   const tbody=$('mSteps'); tbody.innerHTML='';
   steps.forEach((s,j)=>{
@@ -218,10 +296,10 @@ function openModal(idx){
       const [gi,si]=e.target.dataset.chk.split(':').map(Number);
       u.checks[gi][si]=e.target.checked; save(); renderGroups();
       e.target.closest('tr').classList.toggle('done-row',e.target.checked);
-      const checkedCount = u.checks[gi].filter(Boolean).length;
-      $('mChecked').textContent = checkedCount;
-      $('mProgress').textContent = steps.length?Math.floor(checkedCount/steps.length*100):0;
-      updateCurrentDisplay(gi,steps); // ✅ 체크 변경 시 현재액가 즉시 갱신
+      const checkedCount=u.checks[gi].filter(Boolean).length;
+      $('mChecked').textContent=checkedCount;
+      $('mProgress').textContent=steps.length?Math.floor(checkedCount/steps.length*100):0;
+      updateCurrentDisplay(gi,steps);
     }
   };
   tbody.oninput=e=>{

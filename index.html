@@ -1,45 +1,275 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>MetaToRI Login</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코인 투자 그룹 매매일지</title>
+<style>
+  :root { --bg:#0d1117; --fg:#e6edf3; --brand:#58a6ff; --panel:#161b22; --panel2:#1f2733; --ok:#4ade80; --warn:#f87171; --line:#333; }
+  body{margin:0;padding:20px;background:var(--bg);color:var(--fg);font-family:system-ui,Segoe UI,Arial;}
+  h1,h2{text-align:center;color:var(--brand);}
+  input,button{padding:8px 10px;margin:4px;border-radius:8px;border:1px solid #222;background:#0f141a;color:var(--fg);}
+  button{background:#0b63ff22;border-color:#0b63ff44;cursor:pointer;} button:hover{background:#0b63ff33;}
+  .danger{background:var(--warn);border-color:#bb4b4b;color:#000;}
+  .group-card{background:var(--panel);padding:12px;margin:10px 0;border-radius:12px;}
+  .group-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
+  .group-title{flex:1;cursor:pointer;}
+  .meta{font-size:13px;color:#a9b7c6;margin-top:4px;}
+  .card-actions button{font-size:12px;padding:6px 10px;margin-left:6px;}
+  .progress-container{background:#222;border-radius:8px;overflow:hidden;height:16px;margin-top:8px;}
+  .progress-bar{background:var(--ok);height:100%;width:0%;text-align:center;font-size:12px;color:#000;}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;justify-content:center;align-items:center;}
+  .modal{background:var(--panel);padding:20px;border-radius:14px;width:95%;max-width:560px;max-height:90vh;overflow:auto;}
+  .modal h3{color:var(--brand);margin:0 0 8px;}
+  .close-btn{float:right;cursor:pointer;color:var(--warn);font-weight:700;}
+  .progress-info{margin:6px 0;padding:6px;background:var(--panel2);border-radius:8px;text-align:center;font-size:14px;}
+  table{width:100%;border-collapse:collapse;margin-top:10px;}
+  th,td{border:1px solid var(--line);padding:8px;text-align:center;font-size:14px;}
+  th{background:var(--panel2);}
+  .done-row{background:#1c2a1c;}
+  .memo-input{width:95%;padding:6px;border-radius:6px;border:1px solid #222;background:#0f141a;color:var(--fg);}
+  .edit-form{background:var(--panel2);padding:10px;border-radius:10px;margin-top:10px;}
+</style>
 </head>
 <body>
-  <h2>로그인 / 회원가입</h2>
-  <input id="email" type="email" placeholder="이메일"><br>
-  <input id="password" type="password" placeholder="비밀번호(6자 이상)"><br>
-  <button id="signup">회원가입</button>
-  <button id="login">로그인</button>
-  <p id="message" style="color:red;"></p>
+<div class="wrap" style="max-width:900px;margin:auto;">
+  <h1>코인 투자 그룹 매매일지</h1>
 
-  <script type="module">
-    import { auth } from './firebase.js';
-    import { createUserWithEmailAndPassword, signInWithEmailAndPassword } 
-      from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+  <!-- 로그인 -->
+  <div id="loginBox" style="text-align:center;">
+    <input type="text" id="nickname" placeholder="닉네임 입력">
+    <button id="loginBtn">로그인</button>
+  </div>
+  <div id="welcome" style="text-align:center;margin-bottom:16px;"></div>
 
-    const email = document.getElementById("email");
-    const password = document.getElementById("password");
-    const msg = document.getElementById("message");
+  <!-- 그룹 생성 -->
+  <div id="groupForm" style="display:none;text-align:center;">
+    <h2>투자 그룹 만들기</h2>
+    <input id="gname" placeholder="그룹명">
+    <input id="startPrice" type="number" placeholder="시작가">
+    <input id="goalPrice" type="number" placeholder="목표가">
+    <input id="profitPercent" type="number" placeholder="수익 퍼센트(%)">
+    <button id="addGroupBtn">생성하기</button>
+  </div>
 
-    document.getElementById("signup").addEventListener("click", async () => {
-      try {
-        await createUserWithEmailAndPassword(auth, email.value, password.value);
-        msg.style.color = "green";
-        msg.textContent = "회원가입 성공! 로그인해주세요.";
-      } catch (error) {
-        msg.textContent = error.message;
-      }
-    });
+  <!-- 그룹 목록 -->
+  <div id="groupList" style="margin-top:18px;"></div>
+</div>
 
-    document.getElementById("login").addEventListener("click", async () => {
-      try {
-        await signInWithEmailAndPassword(auth, email.value, password.value);
-        window.location.href = "gallery.html";
-      } catch (error) {
-        msg.textContent = "로그인 실패: " + error.message;
-      }
-    });
-  </script>
+<!-- 모달 -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <span class="close-btn" id="closeModalBtn">✖ 닫기</span>
+    <h3 id="mTitle"></h3>
+    <div class="meta">
+      <b>시작가</b> <span id="mStart"></span> · 
+      <b>목표가</b> <span id="mGoal"></span> · 
+      <b>라운드 수익률</b> <span id="mPercent"></span>%
+    </div>
+    <!-- 현재액가 -->
+    <div class="progress-info">
+      현재액가 : <span id="mCurrent"></span> 원
+    </div>
+    <!-- 진행 현황 -->
+    <div class="progress-info">
+      진행: <span id="mChecked"></span> / <span id="mTotal"></span> 단계
+      (<span id="mProgress"></span>%)
+    </div>
+    <hr style="border-color:#222;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>체크</th><th>현재가</th><th>누적수익금</th><th>누적수익률</th><th>성공 메모</th>
+        </tr>
+      </thead>
+      <tbody id="mSteps"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+const $=id=>document.getElementById(id);
+let nickname=localStorage.getItem('nickname')||'';
+let userData=JSON.parse(localStorage.getItem('userData')||'{}');
+
+function save(){localStorage.setItem('userData',JSON.stringify(userData));}
+function ensureUser(n){if(!userData[n])userData[n]={groups:[],checks:[],memos:[]};}
+function floor(n){return Math.floor(Number(n||0));}
+
+function calcSteps(g){
+  const r=g.percent/100; let p=g.start; let round=0, arr=[];
+  if(!(r>0)&&!(g.goal>g.start)) return arr;
+  while(p<g.goal&&round<500){
+    round++; p=floor(p*(1+r));
+    arr.push({round,current:p,profit:floor(p-g.start),gainPct:Math.floor((p/g.start-1)*100)});
+  } return arr;
+}
+
+function login(){
+  const name=$('nickname').value.trim();
+  if(!name) return alert('닉네임 입력');
+  nickname=name; ensureUser(nickname);
+  localStorage.setItem('nickname',nickname); save(); initUI();
+}
+function logout(){nickname='';localStorage.removeItem('nickname');$('welcome').innerHTML='';$('groupForm').style.display='none';$('groupList').innerHTML='';$('loginBox').style.display='block';}
+
+function initUI(){
+  if(!nickname) return;
+  ensureUser(nickname);
+  $('welcome').innerHTML=`${nickname} 님 환영합니다 👋 <button class="danger" id="logoutBtn">로그아웃</button>`;
+  $('loginBox').style.display='none';
+  $('groupForm').style.display='block';
+  $('logoutBtn').addEventListener('click',logout);
+  renderGroups();
+}
+
+function addGroup(){
+  const name=$('gname').value.trim();
+  const start=Number($('startPrice').value);
+  const goal=Number($('goalPrice').value);
+  const percent=Number($('profitPercent').value);
+  if(!name||isNaN(start)||isNaN(goal)||isNaN(percent)) return alert('모든 값을 입력하세요');
+  ensureUser(nickname);
+  userData[nickname].groups.push({name,start:floor(start),goal:floor(goal),percent});
+  userData[nickname].checks.push([]); userData[nickname].memos.push([]);
+  save();
+  ['gname','startPrice','goalPrice','profitPercent'].forEach(id=>$(id).value='');
+  renderGroups();
+}
+
+function renderGroups(){
+  const list=$('groupList'); const u=userData[nickname];
+  list.innerHTML='<h2>내 투자 그룹</h2>';
+  if(u.groups.length===0){list.insertAdjacentHTML('beforeend','<p style="text-align:center;color:#aaa;">아직 그룹이 없습니다.</p>');return;}
+  u.groups.forEach((g,i)=>{
+    const steps=calcSteps(g);
+    while(u.checks[i].length<steps.length)u.checks[i].push(false);
+    while(u.memos[i].length<steps.length)u.memos[i].push('');
+    const progress=steps.length?Math.floor(u.checks[i].filter(Boolean).length/steps.length*100):0;
+
+    const card=document.createElement('div'); card.className='group-card';
+    const header=document.createElement('div'); header.className='group-header';
+    const title=document.createElement('div'); title.className='group-title';
+    title.innerHTML=`<strong>${g.name}</strong>
+      <div class="meta">시작:${floor(g.start).toLocaleString()} → 목표:${floor(g.goal).toLocaleString()} · 수익률:${g.percent}%</div>
+      <div class="progress-container"><div class="progress-bar" style="width:${progress}%;">${progress}%</div></div>`;
+    title.addEventListener('click',()=>openModal(i));
+    const actions=document.createElement('div'); actions.className='card-actions';
+    const editBtn=document.createElement('button'); editBtn.textContent='수정';
+    editBtn.addEventListener('click',e=>{e.stopPropagation();editGroup(i);});
+    const delBtn=document.createElement('button'); delBtn.textContent='삭제'; delBtn.className='danger';
+    delBtn.addEventListener('click',e=>{e.stopPropagation();deleteGroup(i);});
+    actions.append(editBtn,delBtn);
+    header.append(title,actions); card.append(header);
+    list.append(card);
+  });
+}
+
+/* ✅ 현재액가 표시 로직: 체크가 없으면 '시작가'를 보여준다 */
+function updateCurrentDisplay(idx,steps){
+  const u=userData[nickname];
+  // 최근 체크된 단계 인덱스 찾기
+  let lastCheckedIndex = -1;
+  for (let j=0;j<u.checks[idx].length;j++){
+    if (u.checks[idx][j]) lastCheckedIndex = j;
+  }
+  let current;
+  if (lastCheckedIndex >= 0) {
+    current = steps[lastCheckedIndex]?.current ?? u.groups[idx].start;
+  } else {
+    // 체크가 하나도 없으면 시작가로 표시
+    current = u.groups[idx].start;
+  }
+  $('mCurrent').textContent = floor(current).toLocaleString();
+}
+
+function openModal(idx){
+  const u=userData[nickname]; const g=u.groups[idx];
+  const steps=calcSteps(g);
+  while(u.checks[idx].length<steps.length)u.checks[idx].push(false);
+  while(u.memos[idx].length<steps.length)u.memos[idx].push('');
+  const checked=u.checks[idx].filter(Boolean).length;
+  const progress=steps.length?Math.floor(checked/steps.length*100):0;
+
+  $('mTitle').textContent=g.name;
+  $('mStart').textContent=floor(g.start).toLocaleString();
+  $('mGoal').textContent=floor(g.goal).toLocaleString();
+  $('mPercent').textContent=g.percent;
+  $('mChecked').textContent=checked;
+  $('mTotal').textContent=steps.length;
+  $('mProgress').textContent=progress;
+  updateCurrentDisplay(idx,steps); // ✅ 여기서 현재액가 갱신
+
+  const tbody=$('mSteps'); tbody.innerHTML='';
+  steps.forEach((s,j)=>{
+    const tr=document.createElement('tr');
+    if(u.checks[idx][j]) tr.classList.add('done-row');
+    tr.innerHTML=`<td>${s.round}</td>
+      <td><input type="checkbox" ${u.checks[idx][j]?'checked':''} data-chk="${idx}:${j}"></td>
+      <td>${s.current.toLocaleString()}</td>
+      <td>${s.profit.toLocaleString()}</td>
+      <td>${s.gainPct}%</td>
+      <td><input class="memo-input" value="${u.memos[idx][j]||''}" data-memo="${idx}:${j}" placeholder="메모"></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.onchange=e=>{
+    if(e.target.dataset.chk){
+      const [gi,si]=e.target.dataset.chk.split(':').map(Number);
+      u.checks[gi][si]=e.target.checked; save(); renderGroups();
+      e.target.closest('tr').classList.toggle('done-row',e.target.checked);
+      const checkedCount = u.checks[gi].filter(Boolean).length;
+      $('mChecked').textContent = checkedCount;
+      $('mProgress').textContent = steps.length?Math.floor(checkedCount/steps.length*100):0;
+      updateCurrentDisplay(gi,steps); // ✅ 체크 변경 시 현재액가 즉시 갱신
+    }
+  };
+  tbody.oninput=e=>{
+    if(e.target.dataset.memo){
+      const [gi,si]=e.target.dataset.memo.split(':').map(Number);
+      u.memos[gi][si]=e.target.value; save();
+    }
+  };
+
+  $('modalBg').style.display='flex';
+}
+
+function closeModal(){ $('modalBg').style.display='none'; }
+function deleteGroup(i){
+  if(!confirm('삭제하시겠습니까?')) return;
+  const u=userData[nickname];
+  u.groups.splice(i,1); u.checks.splice(i,1); u.memos.splice(i,1);
+  save(); renderGroups();
+}
+function editGroup(i){
+  document.querySelectorAll('.edit-form').forEach(x=>x.remove());
+  const u=userData[nickname]; const g=u.groups[i];
+  const card=document.querySelectorAll('.group-card')[i];
+  const form=document.createElement('div');
+  form.className='edit-form';
+  form.innerHTML=`<input id="en${i}" value="${g.name}">
+    <input id="es${i}" type="number" value="${g.start}">
+    <input id="eg${i}" type="number" value="${g.goal}">
+    <input id="ep${i}" type="number" value="${g.percent}">
+    <button id="sv${i}">저장</button> <button id="cc${i}" class="danger">취소</button>`;
+  card.append(form);
+  $(`sv${i}`).onclick=()=>{
+    const name=$(`en${i}`).value.trim();
+    const s=Number($(`es${i}`).value), g2=Number($(`eg${i}`).value), p=Number($(`ep${i}`).value);
+    if(!name||isNaN(s)||isNaN(g2)||isNaN(p)) return alert('모두 입력');
+    u.groups[i]={name,start:floor(s),goal:floor(g2),percent:p}; save(); renderGroups();
+  };
+  $(`cc${i}`).onclick=()=>renderGroups();
+}
+
+$('loginBtn').addEventListener('click',login);
+$('addGroupBtn').addEventListener('click',addGroup);
+$('closeModalBtn').addEventListener('click',closeModal);
+$('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg')closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+if(nickname){ensureUser(nickname);initUI();}
+});
+</script>
 </body>
 </html>
